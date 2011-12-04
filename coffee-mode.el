@@ -219,26 +219,37 @@ If FILENAME is omitted, the current buffer's file name is used."
 	  (goto-char (point-min))
 	  (forward-line (1- line)))))))
 
-(defun coffee-compile-buffer ()
-  "Compiles the current buffer and displays the JS in another buffer."
+(defun coffee-run ()
+  "Runs active region or whole buffer"
   (interactive)
   (save-excursion
-    (coffee-compile-region (point-min) (point-max))))
+    (if (not (region-active-p))
+        (coffee-compile-or-run t (point-min) (point-max) t)
+      (coffee-compile-or-run nil (region-beginning) (region-end) t))))
 
-(defun coffee-compile-region (start end)
-  "Compiles a region and displays the JS in another buffer."
+(defun coffee-compile ()
+  "Compiles active region or whole buffer"
+  (interactive)
+  (save-excursion
+    (if (not (region-active-p))
+        (coffee-compile-or-run t (point-min) (point-max) nil)
+      (coffee-compile-or-run nil (region-beginning) (region-end) nil))))
+
+(defun coffee-compile-or-run (file start end run)
+  "Compiles or runs a region and displays the output in another buffer."
   (interactive "r")
-
+  (when file (save-buffer))
   (let ((buffer (get-buffer coffee-compiled-buffer-name)))
     (when buffer
       (kill-buffer buffer)))
-
   (apply (apply-partially 'call-process-region start end coffee-command nil
                           (get-buffer-create coffee-compiled-buffer-name)
                           nil)
-         (append coffee-args-compile (list "-s" "-p")))
+         (if run 
+             (list (if file (buffer-file-name) "-s")) 
+           (append coffee-args-compile (list "-s" "-p"))))
   (switch-to-buffer (get-buffer coffee-compiled-buffer-name))
-  (funcall coffee-js-mode)
+  (when (not run) (funcall coffee-js-mode))
   (goto-char (point-min)))
 
 (defun coffee-js2coffee-replace-region (start end)
@@ -290,9 +301,8 @@ If FILENAME is omitted, the current buffer's file name is used."
 (easy-menu-define coffee-mode-menu coffee-mode-map
   "Menu for CoffeeScript mode"
   '("CoffeeScript"
-    ["Compile File" coffee-compile-file]
-    ["Compile Buffer" coffee-compile-buffer]
-    ["Compile Region" coffee-compile-region]
+    ["Run" coffee-run]
+    ["Compile" coffee-compile]
     ["REPL" coffee-repl]
     "---"
     ["CoffeeScript Reference" coffee-open-reference]
@@ -666,9 +676,8 @@ line? Returns `t' or `nil'. See the README for more details."
   "Major mode for editing CoffeeScript."
 
   ;; key bindings
-  (define-key coffee-mode-map (kbd "A-r") 'coffee-compile-buffer)
-  (define-key coffee-mode-map (kbd "A-R") 'coffee-compile-region)
-  (define-key coffee-mode-map (kbd "A-M-r") 'coffee-repl)
+  (define-key coffee-mode-map (kbd "s-r") 'coffee-run)
+  (define-key coffee-mode-map (kbd "s-b") 'coffee-compile)
   (define-key coffee-mode-map [remap comment-dwim] 'coffee-comment-dwim)
   (define-key coffee-mode-map "\C-m" 'coffee-newline-and-indent)
   (define-key coffee-mode-map "\C-c\C-o\C-s" 'coffee-cos-mode)
@@ -688,7 +697,7 @@ line? Returns `t' or `nil'. See the README for more details."
   ;; indentation
   (make-local-variable 'indent-line-function)
   (setq indent-line-function 'coffee-indent-line)
-  (set (make-local-variable 'tab-width) coffee-tab-width)
+  ;; (set (make-local-variable 'tab-width) coffee-tab-width)
 
   ;; imenu
   (make-local-variable 'imenu-create-index-function)
