@@ -88,10 +88,12 @@
   :type 'boolean
   :group 'coffee)
 
-(defcustom coffee-tab-width tab-width
+(defcustom coffee-tab-width 4
   "The tab width to use when indenting."
   :type 'integer
   :group 'coffee)
+
+(message (number-to-string coffee-tab-width))
 
 (defcustom coffee-command "coffee"
   "The CoffeeScript command used for evaluating code. Must be in your
@@ -697,7 +699,7 @@ line? Returns `t' or `nil'. See the README for more details."
   ;; indentation
   (make-local-variable 'indent-line-function)
   (setq indent-line-function 'coffee-indent-line)
-  ;; (set (make-local-variable 'tab-width) coffee-tab-width)
+  (set (make-local-variable 'tab-width) coffee-tab-width)
 
   ;; imenu
   (make-local-variable 'imenu-create-index-function)
